@@ -1,15 +1,17 @@
 import argparse
 import os
+import platform
 import time
-import uuid
 import requests
+import subprocess
+import hashlib
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 def check(src):
     """通过网络请求验证MAC地址"""
-    url = 'https://test-1312265679.cos.ap-chengdu.myqcloud.com/config.json'
+    url = 'https://test-1312265679.cos.ap-chengdu.myqcloud.com/config_check.json'
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
@@ -17,7 +19,7 @@ def check(src):
             checks_list = json_data.get('checks', [])
             if src in checks_list:
                 return 1
-        print('网络请求失败或未找到匹配的MAC')
+        print('网络请求失败或未找到匹配的机器信息')
         return 0
     except requests.RequestException as e:
         print('请求错误:', e)
@@ -203,12 +205,64 @@ def create_driver():
     # return webdriver.Chrome(options=options)
     return webdriver.Chrome()
 driver=create_driver()
+
+def get_windows_hardware_id():
+    # 以Windows为例使用wmic
+    try:
+        # 获取硬盘序列号
+        disk_id = subprocess.check_output('wmic diskdrive get SerialNumber', shell=True).decode().splitlines()[1].strip()
+        # 获取主板序列号
+        board_id = subprocess.check_output('wmic baseboard get serialnumber', shell=True).decode().splitlines()[1].strip()
+        # 拼接信息
+        hw_info = disk_id + board_id
+        # 取哈希值作为唯一标识
+        hw_hash = hashlib.sha256(hw_info.encode()).hexdigest()
+        return hw_hash
+    except Exception as e:
+        return None
+def get_mac_hardware_info():
+    try:
+        # 获取主板（主板编号）
+        smb_info = subprocess.check_output(
+            ["system_profiler", "SPHardwareDataType"]
+        ).decode()
+
+        # 获取硬盘信息
+        disk_info = subprocess.check_output(
+            ["system_profiler", "SPStorageDataType"]
+        ).decode()
+
+        # 提取序列号 (示例，需根据实际内容调整正则或搜索逻辑)
+        import re
+
+        # 提取硬件信息中的序列号
+        serial_match = re.search(r"Serial Number \(system\): (.+)", smb_info)
+        serial_number = serial_match.group(1).strip() if serial_match else ""
+
+        # 提取硬盘序列号（示例可能需要调整，具体看输出内容）
+        # 常用的方法是用 ioreg 获取某个设备的序列号，但比较复杂
+        # 这里仅作为示例：直接用主板编号作为唯一标识
+        hw_str = serial_number
+
+        # 生成哈希作为唯一ID
+        hw_hash = hashlib.sha256(hw_str.encode()).hexdigest()
+        return hw_hash
+    except Exception as e:
+        return None
 if __name__ == '__main__':
+    machine_id=""
+    os_name = platform.system()
+    if os_name == "Windows":
+        machine_id=get_windows_hardware_id()
+        print("当前操作系统是Windows")
+    elif os_name == "Darwin":
+        machine_id = get_mac_hardware_info()
+        print("当前操作系统是macOS")
     # 获取MAC地址，并转为字符串
-    mac_address = uuid.getnode()
-    mac_str = str(mac_address)
-    print("检测MAC：", mac_str)
-    result = check(mac_str)
+    print(f"机器唯一标识： {machine_id}")
+    # mac_address = uuid.getnode()
+    # mac_str = str(mac_address)
+    result = check(machine_id)
     if result:
         print("验证通过，即将开始执行。")
         print(os.getcwd())
@@ -216,7 +270,9 @@ if __name__ == '__main__':
         parser.add_argument('file_path', type=str, help='账户密码文件路径')
         args = parser.parse_args()
         file_path = os.path.abspath(args.file_path)
+        print("账号信息文件路径: ",file_path)
         accounts_info=get_account_password_map(file_path)
+        # accounts_info=get_account_password_map("accounts.txt")
         for account, password in accounts_info.items():
             login(account, password)
             start()

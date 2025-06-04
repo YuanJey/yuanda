@@ -95,7 +95,7 @@ def login(account, password):
         )
         # veriimg = driver.find_element(By.ID, 'veriimg')
         veriimg.screenshot('veriimg.png')
-        captcha_code = get_code_from_path("../veriimg.png", "4f7fe23e7cd68680a6b320982be0a1c9")
+        captcha_code = get_code_from_path("./veriimg.png", "4f7fe23e7cd68680a6b320982be0a1c9")
         if captcha_code:
             print('识别到验证码:', captcha_code)
             # 输入验证码
@@ -195,11 +195,11 @@ if __name__ == '__main__':
     result = check(mac_str)
     if result:
         print("验证通过，即将开始执行。")
-        parser = argparse.ArgumentParser(description='读取账户密码文件')
-        parser.add_argument('file_path', type=str, help='账户密码文件路径')
-        args = parser.parse_args()
-        file_path = os.path.abspath(args.file_path)
-        accounts_info = get_account_password_map(file_path)
+        # parser = argparse.ArgumentParser(description='读取账户密码文件')
+        # parser.add_argument('file_path', type=str, help='账户密码文件路径')
+        # args = parser.parse_args()
+        # file_path = os.path.abspath(args.file_path)
+        accounts_info = get_account_password_map("./accounts.txt")
         for account, password in accounts_info.items():
             login(account, password)
             cookie = get_cookie()

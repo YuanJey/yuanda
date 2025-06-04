@@ -1,7 +1,5 @@
-import argparse
-import os
 from datetime import datetime, timedelta
-
+from concurrent.futures import ThreadPoolExecutor
 import requests
 from selenium import webdriver
 
@@ -76,16 +74,34 @@ def get_cookie():
     cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies}
     return cookie_dict
 driver=webdriver.Chrome()
+# if __name__ == '__main__':
+#     driver.get("https://hx.yuanda.biz")
+#     input("请在浏览器中完成登陆操作后，按Enter继续...")
+#     # parser = argparse.ArgumentParser(description='读取账户密码文件')
+#     # parser.add_argument('file_path', type=str, help='账户密码文件路径')
+#     # args = parser.parse_args()
+#     # file_path = os.path.abspath(args.file_path)
+#     # accounts_info = get_account_password_map(file_path)
+#
+#     accounts_info = get_account_password_map("accounts.txt")
+#     for account, password in accounts_info.items():
+#         jd_map=read_file(account)
+#         with ThreadPoolExecutor(max_workers=5) as executor:
+#             for jd_account, jd_password in jd_map.items():
+#                 executor.submit(verification(jd_account, jd_password, get_cookie()))
+
+
 if __name__ == '__main__':
     driver.get("https://hx.yuanda.biz")
     input("请在浏览器中完成登陆操作后，按Enter继续...")
-    parser = argparse.ArgumentParser(description='读取账户密码文件')
-    parser.add_argument('file_path', type=str, help='账户密码文件路径')
-    args = parser.parse_args()
-    file_path = os.path.abspath(args.file_path)
-    accounts_info = get_account_password_map(file_path)
-    # accounts_info = get_account_password_map("accounts.txt")
-    for account, password in accounts_info.items():
-        jd_map=read_file(account)
-        for jd_account, jd_password in jd_map.items():
-            verification(jd_account, jd_password,get_cookie())
+
+    accounts_info = get_account_password_map("accounts.txt")
+
+    cookie = get_cookie()  # 统一获取一次 Cookie（确保登录状态有效）
+
+    with ThreadPoolExecutor(max_workers=5) as executor:  # 线程池统一管理
+        for account, password in accounts_info.items():
+            jd_map = read_file(account)
+            for jd_account, jd_password in jd_map.items():
+                executor.submit(verification, jd_account, jd_password, cookie)
+
