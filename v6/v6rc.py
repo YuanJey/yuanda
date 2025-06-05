@@ -198,7 +198,16 @@ def get_account_password_map(file_path):
                 account_password_map[account] = password
 
     return account_password_map
+def get_key():
+    with open('key.txt', 'r', encoding='utf-8') as file:
+        key=''
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue  # 跳过空行
+            key = line
 
+    return key
 
 def create_driver():
     # options = Options()
@@ -253,19 +262,9 @@ def get_mac_hardware_info():
     except Exception as e:
         return None
 if __name__ == '__main__':
-    machine_id=""
-    os_name = platform.system()
-    if os_name == "Windows":
-        machine_id=get_windows_hardware_id()
-        print("当前操作系统是Windows")
-    elif os_name == "Darwin":
-        machine_id = get_mac_hardware_info()
-        print("当前操作系统是macOS")
-    # 获取MAC地址，并转为字符串
-    print(f"机器唯一标识： {machine_id}")
-    # mac_address = uuid.getnode()
-    # mac_str = str(mac_address)
-    result = check(machine_id)
+    key=get_key()
+    print("key: ",key)
+    result = check(key)
     if result:
         print("验证通过，即将开始执行。")
         print(os.getcwd())
@@ -279,7 +278,5 @@ if __name__ == '__main__':
         login(account, password)
         # login("nuoshou771", "Yuan970901")
         start()
-        logout()
-        driver.quit()
     else:
         print("MAC验证未通过或无权限。")
