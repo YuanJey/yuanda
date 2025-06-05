@@ -1,8 +1,6 @@
 import argparse
 import os
 import time
-import uuid
-
 import requests
 import subprocess
 import hashlib
@@ -263,11 +261,11 @@ def get_mac_hardware_info():
     except Exception as e:
         return None
 if __name__ == '__main__':
-    key=uuid.getnode()
-    print("key: ",key)
-    result = check(key)
+    phone=get_key()
+    print("授权的手机号: ",phone)
+    result = check(phone)
     if result:
-        print("验证通过，即将开始执行。")
+        print("手机号验证通过，即将开始执行。")
         print(os.getcwd())
         parser = argparse.ArgumentParser(description='账户信息')
         parser.add_argument('account', type=str, help='账户')
@@ -280,4 +278,4 @@ if __name__ == '__main__':
         # login("nuoshou771", "Yuan970901")
         start()
     else:
-        print("MAC验证未通过或无权限。")
+        print("手机号验证未通过或无权限。")
