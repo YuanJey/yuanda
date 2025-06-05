@@ -1,7 +1,8 @@
 import argparse
 import os
-import platform
 import time
+import uuid
+
 import requests
 import subprocess
 import hashlib
@@ -262,7 +263,7 @@ def get_mac_hardware_info():
     except Exception as e:
         return None
 if __name__ == '__main__':
-    key=get_key()
+    key=uuid.getnode()
     print("key: ",key)
     result = check(key)
     if result:
