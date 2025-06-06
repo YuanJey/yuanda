@@ -177,13 +177,6 @@ def download_file(cookie,name):
 def logout():
     try:
         driver.get('https://sc.yuanda.biz/jingdian/User/loginOut.html')
-
-        # # 点击退出登录按钮
-        # logout_link = WebDriverWait(driver, 10).until(
-        #     EC.element_to_be_clickable((By.XPATH, '//a[@href="/jingdian/User/loginOut.html"]'))
-        # )
-        # # 直接点击
-        # logout_link.click()
         print("已成功退出登录。")
     except Exception as e:
         print(f"退出登录失败：{e}")
