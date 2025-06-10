@@ -262,6 +262,7 @@ def get_balance():
     balance_text = balance_element.text
     print(f"余额：{balance_text}")
     balance_text = balance_text.replace('元', '').strip()
+    balance_text=balance_text.replace(',', '')
     balance_text = float(balance_text)
     return balance_text
 
