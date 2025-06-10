@@ -122,22 +122,10 @@ def login(account, password):
             EC.element_to_be_clickable((By.XPATH, '//div//ul//li//a[text()="登录"]'))
         )
         login_btn.click()
-
-        # 输入账号密码
-        account_input = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.ID, 'account'))
-        )
-        account_input.send_keys(account)
-
-        password_input = driver.find_element(By.ID, 'password')
-        password_input.send_keys(password)
-
         # 循环处理验证码
         retry_count = 0
-        max_retries = 5
-        while retry_count < max_retries:
+        while True:
             print(f"尝试登录第 {retry_count + 1} 次...")
-
             try:
                 # 等待验证码图片出现
                 veriimg = WebDriverWait(driver, 10).until(
@@ -158,6 +146,14 @@ def login(account, password):
                     veri_input = driver.find_element(By.ID, 'veri')
                     veri_input.clear()
                     veri_input.send_keys(captcha_code)
+                    # 输入账号密码
+                    account_input = WebDriverWait(driver, 10).until(
+                        EC.visibility_of_element_located((By.ID, 'account'))
+                    )
+                    account_input.send_keys(account)
+
+                    password_input = driver.find_element(By.ID, 'password')
+                    password_input.send_keys(password)
 
                     # 提交登录
                     login_button = driver.find_element(By.ID, 'loginbtn')
@@ -178,7 +174,6 @@ def login(account, password):
                 print(f"验证码处理异常: {e}")
                 driver.refresh()
                 retry_count += 1
-        print("达到最大重试次数，登录失败。")
     except Exception as e:
         print(f"登录过程发生严重错误: {e}")
 
