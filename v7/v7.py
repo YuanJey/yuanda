@@ -111,7 +111,79 @@ def get_code_from_path(image_path, api_key):
             return None
     print('超时未获得识别结果')
     return None
+
+
 def login(account, password):
+    driver.get('https://sc.yuanda.biz/')
+
+    try:
+        # 点击登录按钮
+        login_btn = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, '//div//ul//li//a[text()="登录"]'))
+        )
+        login_btn.click()
+
+        # 输入账号密码
+        account_input = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.ID, 'account'))
+        )
+        account_input.send_keys(account)
+
+        password_input = driver.find_element(By.ID, 'password')
+        password_input.send_keys(password)
+
+        # 循环处理验证码
+        retry_count = 0
+        max_retries = 5
+        while retry_count < max_retries:
+            print(f"尝试登录第 {retry_count + 1} 次...")
+
+            try:
+                # 等待验证码图片出现
+                veriimg = WebDriverWait(driver, 10).until(
+                    EC.visibility_of_element_located((By.ID, 'veriimg'))
+                )
+
+                file_path = f'./{account}/veriimg.png'
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                veriimg.screenshot(file_path)
+
+                # 获取验证码
+                captcha_code = get_code_from_path(file_path, "4f7fe23e7cd68680a6b320982be0a1c9")
+
+                if captcha_code:
+                    print('识别到验证码:', captcha_code)
+
+                    # 输入验证码
+                    veri_input = driver.find_element(By.ID, 'veri')
+                    veri_input.clear()
+                    veri_input.send_keys(captcha_code)
+
+                    # 提交登录
+                    login_button = driver.find_element(By.ID, 'loginbtn')
+                    login_button.click()
+                    if WebDriverWait(driver, 10).until(
+                            lambda d: d.current_url == 'https://sc.yuanda.biz/jingdian/user/uscenter.html'
+                    ):
+                        print('登录成功！')
+                        return
+                    else:
+                        print('登录失败，页面未跳转。刷新重试...')
+                        driver.refresh()
+                else:
+                    print('验证码识别失败，刷新页面重试...')
+                    driver.refresh()
+                    retry_count += 1
+            except Exception as e:
+                print(f"验证码处理异常: {e}")
+                driver.refresh()
+                retry_count += 1
+        print("达到最大重试次数，登录失败。")
+    except Exception as e:
+        print(f"登录过程发生严重错误: {e}")
+
+
+def login1(account, password):
     driver.get('https://sc.yuanda.biz/')
     # 点击登录
     login_btn = WebDriverWait(driver, 10).until(
@@ -152,6 +224,7 @@ def login(account, password):
             login_button.click()
             time.sleep(3)  # 等待页面加载
             current_url = driver.current_url
+            print("当前页面URL:", current_url)
             if current_url == 'https://sc.yuanda.biz/jingdian/user/uscenter.html':
                 print('登录成功！')
                 break
@@ -315,6 +388,7 @@ if __name__ == '__main__':
         parser.add_argument('--num500', type=int, default=0, help='500元数量')
         parser.add_argument('--num1000', type=int, default=0, help='1000元数量')
         parser.add_argument('--num2000', type=int, default=0, help='2000元数量')
+        parser.add_argument('--is3w', action='store_true', help='仅当账户余额 >=30000 元时才执行购买')
         args = parser.parse_args()
         num100 = args.num100
         num200 = args.num200
@@ -323,6 +397,7 @@ if __name__ == '__main__':
         num2000 = args.num2000
         account = args.account
         password = args.password
+        is3w = args.is3w
         # account = "nuoshou776"
         # password = "Yuan970901"
         print("账号信息: ",account,password)
@@ -333,8 +408,8 @@ if __name__ == '__main__':
         save_balance_to_file(account, str(balance))
         while True:
             balance = get_balance()
-            if balance >=30000.00:
-                print("余额大于等于30000元，即将开始执行。")
+            if (balance >=30000.00) or not is3w:
+                print("余额大于等于30000元或强制执行即将开始执行。")
                 break
             else:
                 print("余额小于30000元，等待充值...")
