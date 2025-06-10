@@ -276,7 +276,7 @@ from datetime import datetime
 def init_err_file():
     date=datetime.now()-timedelta(days=1)
     current_date = date.strftime("%Y-%m-%d")
-    filename = f"{current_date}_err.txt"
+    filename = f"{current_date}_balance.txt"
 
     if not os.path.exists(filename):
         try:
