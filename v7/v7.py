@@ -1,13 +1,15 @@
 import argparse
 import os
 import time
+from datetime import datetime, timedelta
+from pathlib import Path
 import requests
-import subprocess
-import hashlib
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+
 def check(src):
     """通过网络请求验证MAC地址"""
     url = 'https://test-1312265679.cos.ap-chengdu.myqcloud.com/config_check.json'
@@ -171,16 +173,16 @@ def logout():
     except Exception as e:
         print(f"退出登录失败：{e}")
 
-def start():
-    for i in range(20):
+def start(num100,num200,num500,num1000,num2000):
+    for i in range(num100):
         buy(m_100, 100)
-    for i in range(10):
+    for i in range(num200):
         buy(m_200, 200)
-    for i in range(16):
+    for i in range(num500):
         buy(m_500, 500)
-    for i in range(16):
+    for i in range(num1000):
         buy(m_1000, 1000)
-    for i in range(1):
+    for i in range(num2000):
         buy(m_2000, 2000)
 
 def get_account_password_map(file_path):
@@ -217,49 +219,86 @@ def create_driver():
     return webdriver.Chrome()
 driver=create_driver()
 
-def get_windows_hardware_id():
-    # 以Windows为例使用wmic
+def get_cookie():
+    """获取cookie"""
+    cookies = driver.get_cookies()
+    cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies}
+    return cookie_dict
+def download_file(cookie,name):
+    """下载文件"""
+    current_date = datetime.now()
+    # 计算前一天的日期
+    previous_day = current_date - timedelta(days=1)
+    # 格式化输出为字符串（格式为YYYY-MM-DD）
+    previous_day_str = previous_day.strftime("%Y-%m-%d")
+    directory = Path(previous_day_str)
+    # 创建目录（包括所有必要的父目录）
+    directory.mkdir(parents=True, exist_ok=True)
+    save_path=previous_day_str+"/"+name+".txt"
+    url = f"https://sc.yuanda.biz/jingdian/index/export.html?start={previous_day_str}&end="
+    # https://sc.yuanda.biz/jingdian/index/export.html?start=2025-06-02&end=
     try:
-        # 获取硬盘序列号
-        disk_id = subprocess.check_output('wmic diskdrive get SerialNumber', shell=True).decode().splitlines()[1].strip()
-        # 获取主板序列号
-        board_id = subprocess.check_output('wmic baseboard get serialnumber', shell=True).decode().splitlines()[1].strip()
-        # 拼接信息
-        hw_info = disk_id + board_id
-        # 取哈希值作为唯一标识
-        hw_hash = hashlib.sha256(hw_info.encode()).hexdigest()
-        return hw_hash
-    except Exception as e:
-        return None
-def get_mac_hardware_info():
+        response = requests.get(url, cookies=cookie,timeout=10)
+        if response.status_code == 200:
+            with open(save_path, 'wb') as f:
+                f.write(response.content)
+            print(f"文件已下载到: {save_path}")
+        else:
+            print(f"下载失败，状态码: {response.status_code}")
+    except requests.RequestException as e:
+        print(f"下载错误: {e}")
+
+#获取余额 <span class="corg">0.00 元</span>
+def get_balance():
+    """获取账户余额"""
+    url = 'https://sc.yuanda.biz/jingdian/User/usCenter.html'
+    driver.get(url)
+    # 等待元素出现（最多等待10秒）
+    wait = WebDriverWait(driver, 10)
+    balance_element = wait.until(
+        EC.presence_of_element_located((By.CLASS_NAME, 'corg'))
+    )
+    # 获取余额文本 '0.00 元'
+    balance_text = balance_element.text
+    print(f"余额：{balance_text}")
+    balance_text = balance_text.replace('元', '').strip()
+    balance_text = float(balance_text)
+    return balance_text
+
+
+import os
+import time
+from datetime import datetime
+
+
+# 模拟 init 函数：检查并创建当日的 _err.txt 文件
+def init_err_file():
+    date=datetime.now()-timedelta(days=1)
+    current_date = date.strftime("%Y-%m-%d")
+    filename = f"{current_date}_err.txt"
+
+    if not os.path.exists(filename):
+        try:
+            with open(filename, 'w') as f:
+                pass  # 创建空文件
+        except Exception as e:
+            print(f"创建文件失败: {e}")
+
+
+# 保存账号与余额到文件
+def save_balance_to_file(k: str, v: str):
+    init_err_file()
+    date = datetime.now() - timedelta(days=1)
+    current_date = date.strftime("%Y-%m-%d")
+    filename = f"{current_date}_balance.txt"
+
     try:
-        # 获取主板（主板编号）
-        smb_info = subprocess.check_output(
-            ["system_profiler", "SPHardwareDataType"]
-        ).decode()
-
-        # 获取硬盘信息
-        disk_info = subprocess.check_output(
-            ["system_profiler", "SPStorageDataType"]
-        ).decode()
-
-        # 提取序列号 (示例，需根据实际内容调整正则或搜索逻辑)
-        import re
-
-        # 提取硬件信息中的序列号
-        serial_match = re.search(r"Serial Number \(system\): (.+)", smb_info)
-        serial_number = serial_match.group(1).strip() if serial_match else ""
-
-        # 提取硬盘序列号（示例可能需要调整，具体看输出内容）
-        # 常用的方法是用 ioreg 获取某个设备的序列号，但比较复杂
-        # 这里仅作为示例：直接用主板编号作为唯一标识
-        hw_str = serial_number
-
-        # 生成哈希作为唯一ID
-        hw_hash = hashlib.sha256(hw_str.encode()).hexdigest()
-        return hw_hash
+        with open(filename, 'a') as f:  # a 表示追加模式
+            f.write(f"{k}\t{v}\n")
     except Exception as e:
-        return None
+        print(f"写入文件失败: {e}")
+
+
 if __name__ == '__main__':
     phone=get_key()
     print("授权的手机号: ",phone)
@@ -270,12 +309,37 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser(description='账户信息')
         parser.add_argument('account', type=str, help='账户')
         parser.add_argument('password', type=str, help='密码')
+        parser.add_argument('--num100', type=int, default=0, help='100元数量')
+        parser.add_argument('--num200', type=int, default=0, help='200元数量')
+        parser.add_argument('--num500', type=int, default=0, help='500元数量')
+        parser.add_argument('--num1000', type=int, default=0, help='1000元数量')
+        parser.add_argument('--num2000', type=int, default=0, help='2000元数量')
         args = parser.parse_args()
+        num100 = args.num100
+        num200 = args.num200
+        num500 = args.num500
+        num1000 = args.num1000
+        num2000 = args.num2000
         account = args.account
         password = args.password
+        # account = "nuoshou776"
+        # password = "Yuan970901"
         print("账号信息: ",account,password)
         login(account, password)
-        # login("nuoshou771", "Yuan970901")
-        start()
+        cookie=get_cookie()
+        download_file(cookie, account)
+        balance=get_balance()
+        save_balance_to_file(account, str(balance))
+        while True:
+            balance = get_balance()
+            if balance >=30000.00:
+                print("余额大于等于30000元，即将开始执行。")
+                break
+            else:
+                print("余额小于30000元，等待充值...")
+                time.sleep(10)
+        start(num100,num200,num500,num1000,num2000)
+        balance = get_balance()
+        print("执行完成，当前余额：",account, balance)
     else:
         print("手机号验证未通过或无权限。")
